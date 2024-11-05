@@ -1,0 +1,7 @@
+name: mcQoB
+version: a1.0
+main: McQoB
+api-version: 1.21.3
+author: kbazu
+commands:
+  바쭈플러그인:
