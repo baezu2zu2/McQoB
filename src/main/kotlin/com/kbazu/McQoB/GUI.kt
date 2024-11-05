@@ -15,7 +15,7 @@ import kotlin.math.min
 
 val pages = mutableListOf<QoBPage>()
 
-abstract class QoBPage(plugin: JavaPlugin, title: String, line: Int, var cannotClose: Boolean=false, var askClose: Boolean=true): Listener{
+abstract class QoBPage(plugin: JavaPlugin, title: String, line: Int, var cannotClose: Boolean=false): Listener{
     val inventory: Inventory = Bukkit.createInventory(null, min(line, 6)*9, title)
     val elements: MutableMap<QoBPosition, QoBElement> = mutableMapOf()
     init {
@@ -47,7 +47,10 @@ abstract class QoBPage(plugin: JavaPlugin, title: String, line: Int, var cannotC
 
     operator fun contains(element: QoBElement): Boolean = this.position(element) == null
 
-    operator fun invoke(humanEntity: HumanEntity) = run { humanEntity.openInventory(inventory) }
+    operator fun invoke(humanEntity: HumanEntity) {
+        humanEntity.openInventory(inventory)
+        onOpened(humanEntity)
+    }
     operator fun minusAssign(pos: QoBPosition): Unit = run { elements.remove(pos) }
     operator fun minusAssign(element: QoBElement) {
         val pos = position(element);
@@ -67,10 +70,6 @@ abstract class QoBPage(plugin: JavaPlugin, title: String, line: Int, var cannotC
 
     @EventHandler
     protected open fun onClosedInternal(event: InventoryCloseEvent) {
-        if(askClose){
-            cannotClose = !onAskClose(event)
-        }
-
         if(cannotClose) {
             event.player.openInventory(inventory)
             return
@@ -79,9 +78,20 @@ abstract class QoBPage(plugin: JavaPlugin, title: String, line: Int, var cannotC
         onClosed(event)
     }
 
-    abstract fun onAskClose(event: InventoryCloseEvent): Boolean
 
     abstract fun onClosed(event: InventoryCloseEvent)
+
+    abstract fun onOpened(player: HumanEntity)
+}
+
+abstract class QoBCloseAskPage(plugin: JavaPlugin, title: String, line: Int, cannotClose: Boolean=false): QoBPage(plugin, title, line, cannotClose){
+    abstract fun onAskClose(event: InventoryCloseEvent): Boolean
+
+    override fun onClosedInternal(event: InventoryCloseEvent) {
+        cannotClose = !onAskClose(event)
+
+        super.onClosedInternal(event)
+    }
 }
 
 data class QoBPosition(var idx: Int, var page: QoBPage){
