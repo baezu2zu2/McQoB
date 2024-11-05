@@ -1,3 +1,5 @@
+package com.kbazu.McQoB
+
 import org.bukkit.Bukkit
 import org.bukkit.ChatColor
 import org.bukkit.command.Command
@@ -230,7 +232,7 @@ interface StateFunc{
     }
 }
 
-enum class State(override val str: String) : StateFunc{
+enum class State(override val str: String) : StateFunc {
     Alpha("a"),
     Beta("b"),
     Release("")
