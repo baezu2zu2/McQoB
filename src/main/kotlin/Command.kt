@@ -1,6 +1,6 @@
-package com.kbazu.McQoB
-
+import org.bukkit.Bukkit
 import org.bukkit.ChatColor
+import org.bukkit.Color
 import org.bukkit.command.Command
 import org.bukkit.command.CommandExecutor
 import org.bukkit.command.CommandSender
@@ -112,7 +112,7 @@ class QoBCommand(val plugin: JavaPlugin, val cmdStr: String, val firstArgs: Muta
         if(arg.check(sender, cmd, cmdStr)){
             val newStr = str+" "+arg.helpStr
             if(arg.completed)
-                sender.sendMessage("$commandColor/${newStr}${ChatColor.RESET}${color}: ${arg.description}")
+                sender.sendMessage("${commandColor}/${newStr}${ChatColor.RESET}${color}: ${arg.description}")
             for (nextArg in arg.nextArgs){
                 helpRecursive(nextArg, color, newStr, sender, cmd, cmdStr)
             }
@@ -205,7 +205,7 @@ abstract class QoBFixedArg(val str: String, description: String, completed: Bool
 }
 
 abstract class QoBValuedArg<T>(helpStr: String, description: String, completed: Boolean=true): QoBArg(helpStr, description, completed){
-    open var result: T? = null
+    abstract var result: T?
     abstract fun value(sender: CommandSender, cmd: Command, cmdStr: String, arg: String)
 }
 
