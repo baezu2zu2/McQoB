@@ -7,6 +7,7 @@ import org.bukkit.entity.HumanEntity
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.inventory.ClickType
+import org.bukkit.event.inventory.InventoryAction
 import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.event.inventory.InventoryCloseEvent
 import org.bukkit.inventory.Inventory
@@ -18,7 +19,7 @@ import kotlin.math.min
 val pages = mutableListOf<QoBPage>()
 val elements = mutableListOf<QoBElement>()
 
-abstract class QoBPage(plugin: JavaPlugin, title: String, line: Int, var cannotClose: Boolean=false): Listener{
+abstract class QoBPage(val plugin: JavaPlugin, title: String, line: Int, var cannotClose: Boolean=false): Listener{
     val inventory: Inventory = Bukkit.createInventory(null, min(line, 6)*9, title)
     val elements: MutableMap<QoBPosition, QoBElement> = mutableMapOf()
     val hash: Int
@@ -74,15 +75,17 @@ abstract class QoBPage(plugin: JavaPlugin, title: String, line: Int, var cannotC
 
     @EventHandler
     fun onClicked(event: InventoryClickEvent){
-        val element = this[event.slot]
-        if(element != null){
-            if(!element.takeAble) event.isCancelled = true
-            element.onClick(event)
+        if(event.view.topInventory == inventory || event.view.bottomInventory == inventory) {
+            val element = this[event.slot]
+            if (element != null) {
+                if (!element.takeAble) event.isCancelled = true
+                element.onClick(event, QoBPosition(event.slot, this))
 
-            for (anyPair in elements){
-                val anyElement = anyPair.value
-                if(anyElement is QoBAnywhereElement){
-                    anyElement.onClickAnywhere(event, this, element, anyPair.key.idx)
+                for (anyPair in elements) {
+                    val anyElement = anyPair.value
+                    if (anyElement is QoBAnywhereElement) {
+                        anyElement.onClickAnywhere(event, element, anyPair.key)
+                    }
                 }
             }
         }
@@ -90,12 +93,14 @@ abstract class QoBPage(plugin: JavaPlugin, title: String, line: Int, var cannotC
 
     @EventHandler
     protected open fun onClosedInternal(event: InventoryCloseEvent) {
-        if(cannotClose) {
-            event.player.openInventory(inventory)
-            return
-        }
+        if(event.view.topInventory == inventory || event.view.bottomInventory == inventory) {
+            if (cannotClose) {
+                event.player.openInventory(inventory)
+                return
+            }
 
-        onClosed(event)
+            onClosed(event)
+        }
     }
 
     abstract fun onClosed(event: InventoryCloseEvent)
@@ -121,64 +126,5 @@ data class QoBPosition(var idx: Int, var page: QoBPage){
 
     override fun equals(other: Any?): Boolean {
         return if(other is QoBPosition) other.idx == idx && other.page == page else super.equals(other)
-    }
-}
-
-abstract class QoBElement(type: Material, amount: Int, name: String?=null, vararg lores: String, var takeAble: Boolean=false, var lockItemMeta: ItemMeta?=null): ItemStack(type, amount){
-    var locked = false
-        get
-        set(value) {
-            field = true
-            if (lockItemMeta != null) this.itemMeta = lockItemMeta
-            field = value
-        }
-
-    init{
-        var itemMeta = this.itemMeta
-        itemMeta?.setDisplayName(name)
-        itemMeta?.lore = lores.toMutableList()
-
-        this.itemMeta = itemMeta
-
-        elements.add(this)
-    }
-
-    abstract fun onClick(event: InventoryClickEvent)
-}
-
-abstract class QoBAnywhereElement(type: Material, amount: Int, name: String?=null, vararg lores: String, takeAble: Boolean=false, lockItemMeta: ItemMeta?=null): QoBElement(type, amount, name, *lores, takeAble=takeAble, lockItemMeta=lockItemMeta){
-    abstract fun onClickAnywhere(event: InventoryClickEvent, page: QoBPage, element: QoBElement, idx: Int)
-}
-
-abstract class QoBSettingElement<T>(type: Material, amount: Int, name: String, val leftDTick: Int, val rightDTick: Int, val data: QoBData<T>, vararg lores: String, takeAble: Boolean=false, lockItemMeta: ItemMeta?=null): QoBAnywhereElement(type, amount, name, *lores, takeAble=takeAble, lockItemMeta=lockItemMeta){
-    init{
-        renewDisplay()
-    }
-
-    abstract fun onLeftClick(event: InventoryClickEvent)
-    abstract fun onRightClick(event: InventoryClickEvent)
-    abstract fun displayStr(): List<String>
-
-    fun renewDisplay(){
-        val itemMeta = itemMeta
-        itemMeta?.lore = displayStr()
-
-        setItemMeta(itemMeta)
-    }
-
-    final override fun onClick(event: InventoryClickEvent) {
-        if(event.click != ClickType.DOUBLE_CLICK) {
-            if (event.isLeftClick) {
-                onLeftClick(event)
-            } else if (event.isRightClick) {
-                onRightClick(event)
-            }
-        }
-    }
-
-    final override fun onClickAnywhere(event: InventoryClickEvent, page: QoBPage, element: QoBElement, idx: Int) {
-        renewDisplay()
-
-        page[idx] = this
     }
 }
