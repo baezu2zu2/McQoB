@@ -157,11 +157,11 @@ abstract class QoBSettingElement<T>(type: Material, amount: Int, name: String, v
 
     abstract fun onLeftClick(event: InventoryClickEvent)
     abstract fun onRightClick(event: InventoryClickEvent)
-    abstract fun displayStr(): String
+    abstract fun displayStr(): List<String>
 
     fun renewDisplay(){
         val itemMeta = itemMeta
-        itemMeta?.lore = mutableListOf(displayStr())
+        itemMeta?.lore = displayStr()
 
         setItemMeta(itemMeta)
     }
