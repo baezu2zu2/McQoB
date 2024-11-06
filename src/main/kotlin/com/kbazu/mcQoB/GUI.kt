@@ -150,7 +150,7 @@ abstract class QoBAnywhereElement(type: Material, amount: Int, name: String?=nul
     abstract fun onClickAnywhere(event: InventoryClickEvent, page: QoBPage, element: QoBElement, idx: Int)
 }
 
-abstract class QoBSettingElement<T>(type: Material, amount: Int, name: String, val leftDTick: Int, val rightDTick: Int, val data: QoBData<T>): QoBAnywhereElement(type, amount, name, takeAble = false){
+abstract class QoBSettingElement<T>(type: Material, amount: Int, name: String, val leftDTick: Int, val rightDTick: Int, val data: QoBData<T>, vararg lores: String, takeAble: Boolean=false, lockItemMeta: ItemMeta?=null): QoBAnywhereElement(type, amount, name, *lores, takeAble=takeAble, lockItemMeta=lockItemMeta){
     init{
         renewDisplay()
     }
