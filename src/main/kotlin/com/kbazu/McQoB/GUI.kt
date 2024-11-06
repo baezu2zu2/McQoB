@@ -60,11 +60,17 @@ abstract class QoBPage(plugin: JavaPlugin, title: String, line: Int, var cannotC
 
 
     @EventHandler
-    fun onClcked(event: InventoryClickEvent){
-        val element = elements[QoBPosition(event.slot, this)]
+    fun onClicked(event: InventoryClickEvent){
+        val element = this[event.slot]
         if(element != null){
             if(!element.takeAble) event.isCancelled = true
             element.onClick(event)
+
+            for (anyElement in elements){
+                if(anyElement is QoBAnywhereElement){
+                    anyElement.onClickAnywhere(event, element)
+                }
+            }
         }
     }
 
@@ -109,7 +115,7 @@ data class QoBPosition(var idx: Int, var page: QoBPage){
     }
 }
 
-abstract class QoBElement(type: Material, amount: Int, itemMeta: ItemMeta, var takeAble: Boolean=false, var lockItemMeta: ItemMeta?=null): ItemStack(type, amount){
+abstract class QoBElement(type: Material, amount: Int, name: String?=null, vararg lores: String, var takeAble: Boolean=false, var lockItemMeta: ItemMeta?=null): ItemStack(type, amount){
     var locked = false
         get
         set(value) {
@@ -119,8 +125,16 @@ abstract class QoBElement(type: Material, amount: Int, itemMeta: ItemMeta, var t
         }
 
     init{
+        var itemMeta = this.itemMeta
+        itemMeta?.setDisplayName(name)
+        itemMeta?.lore = lores.toMutableList()
+
         this.itemMeta = itemMeta
     }
 
     abstract fun onClick(event: InventoryClickEvent)
+}
+
+abstract class QoBAnywhereElement(type: Material, amount: Int, name: String?=null, vararg lores: String, takeAble: Boolean=false, lockItemMeta: ItemMeta?=null): QoBElement(type, amount, name, *lores, takeAble=takeAble, lockItemMeta=lockItemMeta){
+    abstract fun onClickAnywhere(event: InventoryClickEvent, element: QoBElement)
 }

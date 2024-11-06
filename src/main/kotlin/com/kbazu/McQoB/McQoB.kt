@@ -222,7 +222,7 @@ class McQoB: JavaPlugin() {
     }
 }
 
-val version: Float = 2.0f
+val version: Float = 3.0f
 val state: State = State.Alpha
 
 interface StateFunc{
