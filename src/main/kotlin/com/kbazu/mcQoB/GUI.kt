@@ -1,4 +1,4 @@
-package com.kbazu.McQoB
+package com.kbazu.mcQoB
 
 import org.bukkit.Bukkit
 import org.bukkit.Material
@@ -18,9 +18,11 @@ val pages = mutableListOf<QoBPage>()
 abstract class QoBPage(plugin: JavaPlugin, title: String, line: Int, var cannotClose: Boolean=false): Listener{
     val inventory: Inventory = Bukkit.createInventory(null, min(line, 6)*9, title)
     val elements: MutableMap<QoBPosition, QoBElement> = mutableMapOf()
+    val hash: Int
     init {
         Bukkit.getPluginManager().registerEvents(this, plugin)
 
+        hash = pages.size
         pages.add(this)
     }
 
@@ -34,8 +36,16 @@ abstract class QoBPage(plugin: JavaPlugin, title: String, line: Int, var cannotC
         return null
     }
 
-    operator fun set(pos: QoBPosition, element: QoBElement) =
-        if(element in this) run { elements.replace(pos, element) } else run { elements.put(pos, element) }
+    operator fun set(pos: QoBPosition, element: QoBElement) {
+        if(element in this) {
+            elements.replace(pos, element)
+        } else {
+            elements.put(pos, element)
+        }
+
+        inventory.setItem(pos.idx, element)
+    }
+
     operator fun set(idx: Int, element: QoBElement) =
         run { this[QoBPosition(idx, this)] = element }
     operator fun set(x: Int, y: Int, element: QoBElement) =
@@ -45,7 +55,7 @@ abstract class QoBPage(plugin: JavaPlugin, title: String, line: Int, var cannotC
     operator fun get(pos: QoBPosition): QoBElement? = elements[pos]
     operator fun get(x: Int, y: Int): QoBElement? = this[QoBPosition(x+y*9, this)]
 
-    operator fun contains(element: QoBElement): Boolean = this.position(element) == null
+    operator fun contains(element: QoBElement): Boolean = this.position(element) != null
 
     operator fun invoke(humanEntity: HumanEntity) {
         humanEntity.openInventory(inventory)
@@ -66,7 +76,8 @@ abstract class QoBPage(plugin: JavaPlugin, title: String, line: Int, var cannotC
             if(!element.takeAble) event.isCancelled = true
             element.onClick(event)
 
-            for (anyElement in elements){
+            for (anyPair in elements){
+                val anyElement = anyPair.value
                 if(anyElement is QoBAnywhereElement){
                     anyElement.onClickAnywhere(event, element)
                 }
@@ -83,7 +94,6 @@ abstract class QoBPage(plugin: JavaPlugin, title: String, line: Int, var cannotC
 
         onClosed(event)
     }
-
 
     abstract fun onClosed(event: InventoryCloseEvent)
 
@@ -108,10 +118,6 @@ data class QoBPosition(var idx: Int, var page: QoBPage){
 
     override fun equals(other: Any?): Boolean {
         return if(other is QoBPosition) other.idx == idx && other.page == page else super.equals(other)
-    }
-
-    override fun hashCode(): Int {
-        return (page.hashCode().toString()+idx.toString()).toInt()
     }
 }
 

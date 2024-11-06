@@ -1,4 +1,4 @@
-package com.kbazu.McQoB
+package com.kbazu.mcQoB
 
 import org.bukkit.Bukkit
 import org.bukkit.ChatColor

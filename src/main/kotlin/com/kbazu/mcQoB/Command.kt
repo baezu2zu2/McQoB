@@ -1,4 +1,4 @@
-package com.kbazu.McQoB
+package com.kbazu.mcQoB
 
 import org.bukkit.ChatColor
 import org.bukkit.command.Command
@@ -218,7 +218,7 @@ abstract class QoBArg(val helpStr: String, val description: String, val complete
     abstract fun run(sender: CommandSender, cmd: Command, cmdStr: String): Boolean
     abstract fun tabComplete(): MutableList<String>
 
-    fun appendArgs(vararg args: QoBArg): QoBArg{
+    fun appendArgs(vararg args: QoBArg): QoBArg {
         nextArgs.addAll(args)
 
         val allNext = mutableListOf<QoBArg>()

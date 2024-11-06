@@ -6,7 +6,7 @@
 
     <groupId>com.kbazu</groupId>
     <artifactId>McQoB</artifactId>
-    <version>a2.0</version>
+    <version>a3.0</version>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

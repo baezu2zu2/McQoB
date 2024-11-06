@@ -1,7 +1,9 @@
 name: mcQoB
 version: a3.0
-main: McQoB
+main: com.kbazu.mcQoB.McQoB
 api-version: 1.21.3
 author: kbazu
+depend:
+  - Kotlin
 commands:
   바쭈플러그인:
