@@ -15,7 +15,7 @@ import java.text.DecimalFormat
 val timers = mutableListOf<QoBBossBarTimer>()
 
 fun timeFormat(tick: Int): String{
-    return "${if (tick/20/60/60==0) "" else "${String.format("%02d", tick/20/60/60)}:"}${String.format("%02d", tick/20/60%60)}:${String.format("%02d", tick/20%60)}.${(0.05*tick%20*100).toInt()}"
+    return "${if (tick/20/60/60==0) "" else "${String.format("%02d", tick/20/60/60)}:"}${String.format("%02d", tick/20/60%60)}:${String.format("%02d", tick/20%60)}.${5*tick%20}"
 }
 
 fun printTimer(sender: CommandSender, timer: QoBBossBarTimer){

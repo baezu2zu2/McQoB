@@ -41,7 +41,7 @@ abstract class QoBPage(val plugin: JavaPlugin, title: String, line: Int, var can
     }
 
     operator fun set(pos: QoBPosition, element: QoBElement) {
-        if(element in this) {
+        if(pos in this) {
             elements.replace(pos, element)
         } else {
             elements.put(pos, element)
@@ -60,6 +60,7 @@ abstract class QoBPage(val plugin: JavaPlugin, title: String, line: Int, var can
     operator fun get(x: Int, y: Int): QoBElement? = this[QoBPosition(x+y*9, this)]
 
     operator fun contains(element: QoBElement): Boolean = this.position(element) != null
+    operator fun contains(pos: QoBPosition): Boolean = elements.containsKey(pos)
 
     operator fun invoke(humanEntity: HumanEntity) {
         humanEntity.openInventory(inventory)
@@ -72,10 +73,9 @@ abstract class QoBPage(val plugin: JavaPlugin, title: String, line: Int, var can
     }
     operator fun minusAssign(idx: Int) = run { this -= QoBPosition(idx, this) }
 
-
     @EventHandler
     fun onClicked(event: InventoryClickEvent){
-        if(event.view.topInventory == inventory || event.view.bottomInventory == inventory) {
+        if(event.clickedInventory == inventory) {
             val element = this[event.slot]
             if (element != null) {
                 if (!element.takeAble) event.isCancelled = true
@@ -104,7 +104,6 @@ abstract class QoBPage(val plugin: JavaPlugin, title: String, line: Int, var can
     }
 
     abstract fun onClosed(event: InventoryCloseEvent)
-
     abstract fun onOpened(player: HumanEntity)
 }
 
@@ -126,5 +125,11 @@ data class QoBPosition(var idx: Int, var page: QoBPage){
 
     override fun equals(other: Any?): Boolean {
         return if(other is QoBPosition) other.idx == idx && other.page == page else super.equals(other)
+    }
+
+    override fun hashCode(): Int {
+        var result = idx
+        result = 31 * result + page.hashCode()
+        return result
     }
 }

@@ -1,5 +1,6 @@
 package com.kbazu.mcQoB
 
+import org.bukkit.Bukkit
 import org.bukkit.Material
 import org.bukkit.event.inventory.ClickType
 import org.bukkit.event.inventory.InventoryAction
@@ -8,6 +9,7 @@ import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.ItemMeta
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scheduler.BukkitRunnable
+import kotlin.math.min
 
 abstract class QoBElement(type: Material, amount: Int, name: String?=null, vararg lores: String, var takeAble: Boolean=false, var lockItemMeta: ItemMeta?=null): ItemStack(type, amount){
     var locked = false
@@ -68,63 +70,130 @@ abstract class QoBSettingElement<T>(type: Material, amount: Int, name: String, v
     }
 }
 
-class QoBItemElement(val airType: Material, val airName: String?, val data: QoBData<ItemStack?>, vararg lores: String, lockMeta: ItemMeta?=null): QoBElement(airType, 1, airName, *lores, takeAble=true, lockItemMeta = lockMeta){
+class QoBItemElement(val airType: Material, val airName: String?, val data: QoBData<ItemStack?>, vararg val lores: String, lockMeta: ItemMeta?=null): QoBElement(airType, 1, airName, *lores, takeAble=false, lockItemMeta = lockMeta){
     init{
-        data.data = this
+        data.data = null
     }
 
     var isAir = true
     val resetRunnable = object: BukkitRunnable(){
         override fun run() {
-            type=airType
-            amount = 1
-            val itemMeta = itemMeta
-            itemMeta?.setDisplayName(airName)
-
-            this@QoBItemElement.itemMeta = itemMeta
-            data.data = null
+            reset()
         }
+    }
+
+    fun reset(){
+        type=airType
+        amount = 1
+        val itemMeta = itemMeta
+        itemMeta?.setDisplayName(airName)
+        itemMeta?.lore = lores.toMutableList()
+
+        this.itemMeta = itemMeta
+        data.data = null
+
+        isAir = true
     }
 
     fun set(item: ItemStack?){
-        if(item != null){
-            type = item.type
-            amount = item.amount
-            itemMeta = item.itemMeta
+        if(isAir) {
+            if(item != null){
+                this.type = item.type
+                this.amount = item.amount
+                this.itemMeta = item.itemMeta
+                item.type = Material.AIR
+                item.amount = 0
 
-            item.type = Material.AIR
-            item.amount = 0
+                if (this.type == Material.AIR) {
+                    isAir = true
+                    reset()
+                }
+                else isAir = false
+            }else{
+                reset()
 
-            data.data = item
+                isAir = true
+            }
+        }else{
+            if (item != null) {
+                if(isSimilar(item) && itemMeta != null){
+                    if(item.amount+amount > item.maxStackSize){
+                        val left = item.amount+amount-item.maxStackSize
+                        amount = item.maxStackSize
+                        item.amount = left
+                    }else{
+                        amount += item.amount
+                        item.amount = 0
+                        item.type = Material.AIR
+                    }
+                }else {
+                    val type = item.type
+                    val amount = item.amount
+                    val itemMeta = item.itemMeta
+
+                    item.type = this.type
+                    item.amount = this.amount
+                    item.itemMeta = this.itemMeta
+
+                    this.type = type
+                    this.amount = amount
+                    this.itemMeta = itemMeta
+
+                    if (this.type == Material.AIR) {
+                        reset()
+                    } else isAir = false
+                }
+            }else{
+                reset()
+            }
         }
     }
 
-    fun reset(plugin: JavaPlugin){
+    fun delayedReset(plugin: JavaPlugin){
         resetRunnable.runTaskLater(plugin, 1)
     }
 
-    final override fun onClick(event: InventoryClickEvent, pos: QoBPosition) {
-        event.isCancelled = true
-        when(event.action){
-            InventoryAction.CLONE_STACK->{
-                if(!isAir) event.isCancelled = false
+    override fun onClick(event: InventoryClickEvent, pos: QoBPosition) {
+        val cursor = event.cursor
+        if(event.isLeftClick){
+            if(isAir){
+                if(cursor != null && !cursor.type.isAir){
+                    set(cursor)
+                }
+            }else{
+                set(cursor)
             }
-            InventoryAction.COLLECT_TO_CURSOR->{
-                if(!isAir) event.isCancelled = false
-            }
-            InventoryAction.PICKUP_ALL->{
-                if(!isAir) event.isCancelled = false
-            }
-            InventoryAction.PICKUP_HALF->{
-                if(!isAir) event.isCancelled = false
-            }
-            InventoryAction.SWAP_WITH_CURSOR->{
-                event.isCancelled = false
-                if(isAir) {
-                    set(event.cursor)
+        }else if(event.isRightClick){
+            if(isAir){
+                if(cursor != null && !cursor.type.isAir){
+                    this.type = cursor.type
+                    this.amount = 1
+                    this.itemMeta = cursor.itemMeta
+
+                    cursor.amount--
+
+                    isAir = false
+                }
+            }else{
+                if(cursor != null && !cursor.type.isAir){
+                    if(cursor.isSimilar(this)){
+                        this.amount++
+                        cursor.amount--
+                    }
+                }else if(cursor != null){
+                    cursor.type = type
+                    cursor.amount = amount / 2 + amount % 2
+                    cursor.itemMeta = itemMeta
+
+                    amount /= 2
                 }
             }
-            else -> {}
         }
+
+        event.currentItem = this
+        event.view.cursor = cursor
+
+        if(isAir) data.data = null
+        else data.data = this
     }
 }
