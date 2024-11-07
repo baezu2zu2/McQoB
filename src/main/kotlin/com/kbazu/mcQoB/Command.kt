@@ -1,10 +1,12 @@
 package com.kbazu.mcQoB
 
+import org.bukkit.Bukkit
 import org.bukkit.ChatColor
 import org.bukkit.command.Command
 import org.bukkit.command.CommandExecutor
 import org.bukkit.command.CommandSender
 import org.bukkit.command.TabCompleter
+import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
 
 class QoBCommand(val plugin: JavaPlugin, val cmdStr: String, val firstArgs: MutableList<QoBArg>): CommandExecutor, TabCompleter{
@@ -183,7 +185,7 @@ abstract class QoBColorArg(description: String, val onlyColor: Boolean=true, val
     }
 }
 
-abstract class QoBStringArg(helpStr: String, description: String, vararg completes: String, completed: Boolean=false, val forceRecommendation: Boolean=true): QoBValuedArg<String>(helpStr, description, completed){
+abstract class QoBStringArg(helpStr: String, description: String, vararg completes: String, completed: Boolean=true, val forceRecommendation: Boolean=false): QoBValuedArg<String>(helpStr, description, completed){
     val recommends = mutableListOf<String>()
     init{
         recommends.addAll(completes)
@@ -196,6 +198,18 @@ abstract class QoBStringArg(helpStr: String, description: String, vararg complet
     override fun check(sender: CommandSender, cmd: Command, cmdStr: String): Boolean = true
     override fun check(sender: CommandSender, cmd: Command, cmdStr: String, arg: String): Boolean = !forceRecommendation || arg in recommends
     override fun value(sender: CommandSender, cmd: Command, cmdStr: String, arg: String) = run { result = arg }
+}
+
+abstract class QoBPlayerArg(helpStr: String, description: String, completed: Boolean=true): QoBValuedArg<Player>(helpStr, description, completed){
+    override fun tabComplete(): MutableList<String> {
+        return Bukkit.getOnlinePlayers().map { it.name }.toMutableList()
+    }
+
+    override fun check(sender: CommandSender, cmd: Command, cmdStr: String): Boolean = true
+    override fun check(sender: CommandSender, cmd: Command, cmdStr: String, arg: String): Boolean = Bukkit.getPlayer(arg) != null
+    override fun value(sender: CommandSender, cmd: Command, cmdStr: String, arg: String) {
+        result = Bukkit.getPlayer(arg)
+    }
 }
 
 abstract class QoBFixedArg(val str: String, description: String, completed: Boolean=true): QoBArg(str, description, completed){

@@ -3,6 +3,7 @@ package com.kbazu.mcQoB
 import org.bukkit.Bukkit
 import org.bukkit.ChatColor
 import org.bukkit.Material
+import org.bukkit.command.CommandSender
 import org.bukkit.entity.HumanEntity
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
@@ -17,9 +18,14 @@ import org.bukkit.plugin.java.JavaPlugin
 import kotlin.math.min
 
 val pages = mutableListOf<QoBPage>()
-val elements = mutableListOf<QoBElement>()
 
-abstract class QoBPage(val plugin: JavaPlugin, title: String, line: Int, var cannotClose: Boolean=false): Listener{
+fun printPage(sender: CommandSender, page: QoBPage){
+    sender.sendMessage("$titleColor[${page.title} 페이지]")
+    sender.sendMessage("${helpColor}요소: ${page.elements}")
+    sender.sendMessage("${helpColor}줄 개수: ${page.inventory.size/9}")
+}
+
+abstract class QoBPage(val plugin: JavaPlugin, val title: String, line: Int, var cannotClose: Boolean=false): Listener{
     val inventory: Inventory = Bukkit.createInventory(null, min(line, 6)*9, title)
     val elements: MutableMap<QoBPosition, QoBElement> = mutableMapOf()
     val hash: Int
@@ -101,6 +107,10 @@ abstract class QoBPage(val plugin: JavaPlugin, title: String, line: Int, var can
 
             onClosed(event)
         }
+    }
+
+    final fun remove(){
+        pages.remove(this)
     }
 
     abstract fun onClosed(event: InventoryCloseEvent)

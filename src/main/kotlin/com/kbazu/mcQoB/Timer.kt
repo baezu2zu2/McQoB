@@ -19,7 +19,7 @@ fun timeFormat(tick: Int): String{
 }
 
 fun printTimer(sender: CommandSender, timer: QoBBossBarTimer){
-    sender.sendMessage("$helpColor${timer.title} 타이머")
+    sender.sendMessage("$titleColor${timer.title} 타이머")
     sender.sendMessage("$helpColor  - 최대 시간: ${timeFormat(timer.maxTick)}")
     sender.sendMessage("$helpColor  - 현재 지난 시간: ${timeFormat(timer.nowTick)}")
     sender.sendMessage("$helpColor  - 진행률: ${String.format("%.2f", timer.progression())}%")
@@ -110,4 +110,8 @@ abstract class QoBBossBarTimer(val plugin: JavaPlugin, var maxTick: Int, var nam
 
     abstract fun onAlert()
     abstract fun onEnd()
+
+    final fun remove(){
+        timers.remove(this)
+    }
 }

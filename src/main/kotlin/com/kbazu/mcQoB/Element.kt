@@ -11,6 +11,8 @@ import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scheduler.BukkitRunnable
 import kotlin.math.min
 
+val elements = mutableListOf<QoBElement>()
+
 abstract class QoBElement(type: Material, amount: Int, name: String?=null, vararg lores: String, var takeAble: Boolean=false, var lockItemMeta: ItemMeta?=null): ItemStack(type, amount){
     var locked = false
         get
@@ -31,6 +33,10 @@ abstract class QoBElement(type: Material, amount: Int, name: String?=null, varar
     }
 
     abstract fun onClick(event: InventoryClickEvent, pos: QoBPosition)
+
+    final fun remove(){
+        elements.remove(this)
+    }
 }
 
 abstract class QoBAnywhereElement(type: Material, amount: Int, name: String?=null, vararg lores: String, takeAble: Boolean=false, lockItemMeta: ItemMeta?=null): QoBElement(type, amount, name, *lores, takeAble=takeAble, lockItemMeta=lockItemMeta){
