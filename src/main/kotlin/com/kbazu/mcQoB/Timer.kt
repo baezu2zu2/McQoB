@@ -35,7 +35,7 @@ abstract class QoBBossBarTimer(val plugin: JavaPlugin, var maxTick: Int, var nam
         }
     val bossBar: BossBar
     var nowTick = 0
-    var speed = 1
+    var speed = 0
     var runnable: BukkitRunnable? = null
     init{
         timers.add(this)
@@ -61,10 +61,11 @@ abstract class QoBBossBarTimer(val plugin: JavaPlugin, var maxTick: Int, var nam
             this(plugin, (hours*60*60+minutes*60+seconds)*20, nameColor, name, color, style, *flags, isTimer=isTimer, alertAt=alertAt)
 
     fun start(vararg players: Player){
+        for (player in players){
+            bossBar.addPlayer(player)
+        }
         if(runnable == null) {
-            for (player in players){
-                bossBar.addPlayer(player)
-            }
+            speed = 1
 
             runnable = object : BukkitRunnable() {
                 override fun run() {

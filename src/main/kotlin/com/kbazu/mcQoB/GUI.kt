@@ -21,7 +21,7 @@ val pages = mutableListOf<QoBPage>()
 
 fun printPage(sender: CommandSender, page: QoBPage){
     sender.sendMessage("$titleColor[${page.title} 페이지]")
-    sender.sendMessage("${helpColor}요소: ${page.elements}")
+    sender.sendMessage("${helpColor}요소 개수: ${page.elements.size}")
     sender.sendMessage("${helpColor}줄 개수: ${page.inventory.size/9}")
 }
 
@@ -53,7 +53,7 @@ abstract class QoBPage(val plugin: JavaPlugin, val title: String, line: Int, var
             elements.put(pos, element)
         }
 
-        inventory.setItem(pos.idx, element)
+        inventory.setItem(pos.idx, element.itemStack)
     }
 
     operator fun set(idx: Int, element: QoBElement) =

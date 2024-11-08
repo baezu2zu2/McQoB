@@ -6,7 +6,7 @@
 
     <groupId>com.kbazu</groupId>
     <artifactId>McQoB</artifactId>
-    <version>a3.0</version>
+    <version>a4.0</version>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -65,7 +65,7 @@
                 <configuration>
                     <mainClass>MainKt</mainClass>
                 </configuration>
-            </plugin>
+            </plugin><plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-compiler-plugin</artifactId><configuration><source>8</source><target>8</target></configuration></plugin>
         </plugins>
     </build>
 

@@ -1,33 +1,32 @@
 package com.kbazu.mcQoB
 
-import org.bukkit.Bukkit
 import org.bukkit.Material
 import org.bukkit.event.inventory.ClickType
-import org.bukkit.event.inventory.InventoryAction
 import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.ItemMeta
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scheduler.BukkitRunnable
-import kotlin.math.min
 
 val elements = mutableListOf<QoBElement>()
 
-abstract class QoBElement(type: Material, amount: Int, name: String?=null, vararg lores: String, var takeAble: Boolean=false, var lockItemMeta: ItemMeta?=null): ItemStack(type, amount){
+abstract class QoBElement(type: Material, amount: Int, name: String?=null, vararg lores: String, var takeAble: Boolean=false, var lockItemMeta: ItemMeta?=null){
+
+    var itemStack = ItemStack(type, amount)
     var locked = false
         get
         set(value) {
             field = true
-            if (lockItemMeta != null) this.itemMeta = lockItemMeta
+            if (lockItemMeta != null) itemStack.itemMeta = lockItemMeta
             field = value
         }
 
     init{
-        var itemMeta = this.itemMeta
+        var itemMeta = itemStack.itemMeta
         itemMeta?.setDisplayName(name)
         itemMeta?.lore = lores.toMutableList()
 
-        this.itemMeta = itemMeta
+        itemStack.itemMeta = itemMeta
 
         elements.add(this)
     }
@@ -53,10 +52,10 @@ abstract class QoBSettingElement<T>(type: Material, amount: Int, name: String, v
     abstract fun displayStr(): List<String>
 
     fun renewDisplay(){
-        val itemMeta = itemMeta
+        val itemMeta = itemStack.itemMeta
         itemMeta?.lore = displayStr()
 
-        setItemMeta(itemMeta)
+        itemStack.itemMeta = itemMeta
     }
 
     final override fun onClick(event: InventoryClickEvent, pos: QoBPosition) {
@@ -77,10 +76,6 @@ abstract class QoBSettingElement<T>(type: Material, amount: Int, name: String, v
 }
 
 class QoBItemElement(val airType: Material, val airName: String?, val data: QoBData<ItemStack?>, vararg val lores: String, lockMeta: ItemMeta?=null): QoBElement(airType, 1, airName, *lores, takeAble=false, lockItemMeta = lockMeta){
-    init{
-        data.data = null
-    }
-
     var isAir = true
     val resetRunnable = object: BukkitRunnable(){
         override fun run() {
@@ -88,14 +83,22 @@ class QoBItemElement(val airType: Material, val airName: String?, val data: QoBD
         }
     }
 
+    init{
+        if(data.data == null){
+            isAir = true
+        }else{
+            this.itemStack = data.data!!
+        }
+    }
+
     fun reset(){
-        type=airType
-        amount = 1
-        val itemMeta = itemMeta
+        itemStack.type=airType
+        itemStack.amount = 1
+        val itemMeta = itemStack.itemMeta
         itemMeta?.setDisplayName(airName)
         itemMeta?.lore = lores.toMutableList()
 
-        this.itemMeta = itemMeta
+        itemStack.itemMeta = itemMeta
         data.data = null
 
         isAir = true
@@ -104,13 +107,13 @@ class QoBItemElement(val airType: Material, val airName: String?, val data: QoBD
     fun set(item: ItemStack?){
         if(isAir) {
             if(item != null){
-                this.type = item.type
-                this.amount = item.amount
-                this.itemMeta = item.itemMeta
+                itemStack.type = item.type
+                itemStack.amount = item.amount
+                itemStack.itemMeta = item.itemMeta
                 item.type = Material.AIR
                 item.amount = 0
 
-                if (this.type == Material.AIR) {
+                if (itemStack.type == Material.AIR) {
                     isAir = true
                     reset()
                 }
@@ -122,13 +125,13 @@ class QoBItemElement(val airType: Material, val airName: String?, val data: QoBD
             }
         }else{
             if (item != null) {
-                if(isSimilar(item) && itemMeta != null){
-                    if(item.amount+amount > item.maxStackSize){
-                        val left = item.amount+amount-item.maxStackSize
-                        amount = item.maxStackSize
+                if(itemStack.isSimilar(item) && itemStack.itemMeta != null){
+                    if(item.amount+itemStack.amount > item.maxStackSize){
+                        val left = item.amount+itemStack.amount-item.maxStackSize
+                        itemStack.amount = item.maxStackSize
                         item.amount = left
                     }else{
-                        amount += item.amount
+                        itemStack.amount += item.amount
                         item.amount = 0
                         item.type = Material.AIR
                     }
@@ -137,15 +140,15 @@ class QoBItemElement(val airType: Material, val airName: String?, val data: QoBD
                     val amount = item.amount
                     val itemMeta = item.itemMeta
 
-                    item.type = this.type
-                    item.amount = this.amount
-                    item.itemMeta = this.itemMeta
+                    item.type = itemStack.type
+                    item.amount = itemStack.amount
+                    item.itemMeta = itemStack.itemMeta
 
-                    this.type = type
-                    this.amount = amount
-                    this.itemMeta = itemMeta
+                    itemStack.type = type
+                    itemStack.amount = amount
+                    itemStack.itemMeta = itemMeta
 
-                    if (this.type == Material.AIR) {
+                    if (itemStack.type == Material.AIR) {
                         reset()
                     } else isAir = false
                 }
@@ -172,9 +175,9 @@ class QoBItemElement(val airType: Material, val airName: String?, val data: QoBD
         }else if(event.isRightClick){
             if(isAir){
                 if(cursor != null && !cursor.type.isAir){
-                    this.type = cursor.type
-                    this.amount = 1
-                    this.itemMeta = cursor.itemMeta
+                    itemStack.type = cursor.type
+                    itemStack.amount = 1
+                    itemStack.itemMeta = cursor.itemMeta
 
                     cursor.amount--
 
@@ -182,24 +185,24 @@ class QoBItemElement(val airType: Material, val airName: String?, val data: QoBD
                 }
             }else{
                 if(cursor != null && !cursor.type.isAir){
-                    if(cursor.isSimilar(this)){
-                        this.amount++
+                    if(cursor.isSimilar(itemStack)){
+                        itemStack.amount++
                         cursor.amount--
                     }
                 }else if(cursor != null){
-                    cursor.type = type
-                    cursor.amount = amount / 2 + amount % 2
-                    cursor.itemMeta = itemMeta
+                    cursor.type = itemStack.type
+                    cursor.amount = itemStack.amount / 2 + itemStack.amount % 2
+                    cursor.itemMeta = itemStack.itemMeta
 
-                    amount /= 2
+                    itemStack.amount /= 2
                 }
             }
         }
 
-        event.currentItem = this
+        event.currentItem = itemStack
         event.view.cursor = cursor
 
         if(isAir) data.data = null
-        else data.data = this
+        else data.data = itemStack
     }
 }

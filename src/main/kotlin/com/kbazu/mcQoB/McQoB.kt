@@ -1,14 +1,17 @@
 package com.kbazu.mcQoB
 
+import com.sun.tools.javac.code.Attribute
 import org.bukkit.Bukkit
 import org.bukkit.ChatColor
 import org.bukkit.command.Command
 import org.bukkit.command.CommandSender
 import org.bukkit.configuration.file.FileConfiguration
 import org.bukkit.configuration.file.YamlConfiguration
+import org.bukkit.configuration.serialization.ConfigurationSerialization
 import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
 import java.io.File
+import java.io.IOException
 import kotlin.math.abs
 
 var errorColor = ChatColor.RED
@@ -23,12 +26,13 @@ class McQoB: JavaPlugin() {
     lateinit var config: YamlConfiguration
     override fun onEnable() {
         config = YamlConfiguration()
-        config.createSection("QoBData_Path")
         config.addDefault("QoBData_Path", "${this.dataFolder}${File.separator}datas.bzu")
 
         configFile = File("${this.dataFolder}${File.separator}config.yml")
         if(!configFile.exists()) {
+            configFile.parentFile.mkdirs()
             configFile.createNewFile()
+            config.set("QoBData_Path", "${this.dataFolder}${File.separator}datas.bzu")
             config.save(configFile)
         }
 
@@ -40,7 +44,6 @@ class McQoB: JavaPlugin() {
     }
 
     override fun onDisable() {
-
         qoBSave(dataFile)
     }
 
@@ -49,6 +52,10 @@ class McQoB: JavaPlugin() {
 
         val path = config.getString("QoBData_Path")
         if(path != null) dataFile = File(path)
+        else {
+            config.set("QoBData_Path", "${this.dataFolder}${File.separator}datas.bzu")
+            dataFile = File("${this.dataFolder}${File.separator}datas.bzu")
+        }
     }
 
     fun qoBCommands(){
@@ -61,6 +68,8 @@ class McQoB: JavaPlugin() {
                 }
             },
             object: QoBFixedArg("컨피그", "", false){
+                override fun check(sender: CommandSender, cmd: Command, cmdStr: String): Boolean = super.check(sender, cmd, cmdStr) && sender.isOp
+                override fun check(sender: CommandSender, cmd: Command, cmdStr: String, arg: String): Boolean = super.check(sender, cmd, cmdStr, arg) && sender.isOp
                 override fun run(sender: CommandSender, cmd: Command, cmdStr: String): Boolean {
                     return false
                 }
@@ -79,7 +88,7 @@ class McQoB: JavaPlugin() {
                 },
                 object: QoBFixedArg("파일", "컨피그 파일을 경로를 봅니다"){
                     override fun run(sender: CommandSender, cmd: Command, cmdStr: String): Boolean {
-                        sender.sendMessage("${helpColor}컨피고 파일의 경로: ${configFile.path}")
+                        sender.sendMessage("${helpColor}컨피그 파일의 경로: ${configFile.path}")
 
                         return true
                     }
@@ -192,21 +201,47 @@ class McQoB: JavaPlugin() {
                     return true
                 }
             }.appendArgs(
-                object: QoBStringArg("[페이지 제목]", "페이지를 엽니다(플레이어만 실행 가능)"){
-                    override fun run(sender: CommandSender, cmd: Command, cmdStr: String): Boolean {
-                        if(sender !is Player) return false
+                object: QoBValuedArg<QoBPage>("[페이지 제목]", "페이지를 엽니다(플레이어만 실행 가능)"){
+                    override fun check(sender: CommandSender, cmd: Command, cmdStr: String): Boolean = sender.isOp
+                    override fun check(sender: CommandSender, cmd: Command, cmdStr: String, arg: String): Boolean = sender.isOp
+                    override fun value(sender: CommandSender, cmd: Command, cmdStr: String, arg: String) {
                         for (page in pages){
-                            if(result == page.title){
-                                printPage(sender, page)
-
-                                return true
+                            if(arg == page.title){
+                                result = page
+                                return
                             }
                         }
-                        return false
                     }
-                }
+
+                    override fun run(sender: CommandSender, cmd: Command, cmdStr: String): Boolean {
+                        if(sender !is Player) return false
+                        if(result != null){
+                            result!!(sender)
+                        }else return false
+                        return true
+                    }
+
+                    override fun tabComplete(): MutableList<String> = pages.map { it.title }.toMutableList()
+                }.appendArgs(
+                    object: QoBFixedArg("제거", "페이지를 제거합니다"){
+                        override fun check(sender: CommandSender, cmd: Command, cmdStr: String): Boolean = super.check(sender, cmd, cmdStr) && sender.isOp
+                        override fun check(sender: CommandSender, cmd: Command, cmdStr: String, arg: String): Boolean = super.check(sender, cmd, cmdStr, arg) && sender.isOp
+
+                        override fun run(sender: CommandSender, cmd: Command, cmdStr: String): Boolean {
+                            if(beforeArgs[1] is QoBValuedArg<*> && (beforeArgs[1] as QoBValuedArg<*>).result is QoBPage){
+                                val page = (beforeArgs[1] as QoBValuedArg<*>).result as QoBPage
+
+                                pages.remove(page)
+                            }
+
+                            return true
+                        }
+                    }
+                )
             ),
             object: QoBFixedArg("데이터", "현재 저장된 QoBData들의 키를 봅니다"){
+                override fun check(sender: CommandSender, cmd: Command, cmdStr: String): Boolean = super.check(sender, cmd, cmdStr) && sender.isOp
+                override fun check(sender: CommandSender, cmd: Command, cmdStr: String, arg: String): Boolean = super.check(sender, cmd, cmdStr, arg) && sender.isOp
                 override fun run(sender: CommandSender, cmd: Command, cmdStr: String): Boolean {
                     sender.sendMessage("${helpColor}현재 ${datas.size}개의 QoBData가 있습니다")
 
@@ -220,54 +255,104 @@ class McQoB: JavaPlugin() {
                     return true
                 }
             }.appendArgs(
-                object: QoBStringArg("[데이터 키]", "데이터를 읽어와 출력합니다"){
-                    override fun run(sender: CommandSender, cmd: Command, cmdStr: String): Boolean {
-                        for (data in datas){
-                            if(result == data.key){
-                                sender.sendMessage("${titleColor}${data.key}")
-                                sender.sendMessage("${helpColor}${data.serialize()}")
-                                sender.sendMessage("${helpColor}${if(data.shouldNotLoad) "저장 진행됨" else "저장 진행되지 않음"}")
+                object: QoBFixedArg("보기", "", false){
+                    override fun check(sender: CommandSender, cmd: Command, cmdStr: String): Boolean = super.check(sender, cmd, cmdStr) && sender.isOp
+                    override fun check(sender: CommandSender, cmd: Command, cmdStr: String, arg: String): Boolean = super.check(sender, cmd, cmdStr, arg) && sender.isOp
+                    override fun run(sender: CommandSender, cmd: Command, cmdStr: String): Boolean = false
+                }.appendArgs(
+                    object: QoBStringArg("[데이터 키]", "데이터를 읽어와 출력합니다"){
+                        override fun check(sender: CommandSender, cmd: Command, cmdStr: String): Boolean = super.check(sender, cmd, cmdStr) && sender.isOp
+                        override fun check(sender: CommandSender, cmd: Command, cmdStr: String, arg: String): Boolean = super.check(sender, cmd, cmdStr, arg) && sender.isOp
+                        override fun run(sender: CommandSender, cmd: Command, cmdStr: String): Boolean {
+                            for (data in datas){
+                                if(result == data.key){
+                                    sender.sendMessage("${titleColor}${data.key}")
+                                    sender.sendMessage("${helpColor}${data.extractString()}")
+                                    sender.sendMessage("${helpColor}${if(data.shouldNotLoad) "저장 진행되지 않음" else "저장 진행됨"}")
 
-                                return true
+                                    return true
+                                }
                             }
+
+                            return false
                         }
 
-                        return false
-                    }
+                        override fun tabComplete(): MutableList<String> {
+                            recommends.addAll(datas.map { it.key })
 
-                },
+                            return super.tabComplete()
+                        }
+                    }
+                ),
                 object: QoBFixedArg("파일", "데이터를 저장하는 파일 경로를 출력합니다"){
+                    override fun check(sender: CommandSender, cmd: Command, cmdStr: String): Boolean = super.check(sender, cmd, cmdStr) && sender.isOp
+                    override fun check(sender: CommandSender, cmd: Command, cmdStr: String, arg: String): Boolean = super.check(sender, cmd, cmdStr, arg) && sender.isOp
                     override fun run(sender: CommandSender, cmd: Command, cmdStr: String): Boolean {
-                        sender.sendMessage(dataFile.path)
+                        sender.sendMessage("데이터 파일의 경로: ${helpColor}${dataFile.path}")
 
                         return true
                     }
 
                 },
                 object: QoBFixedArg("저장", "데이터를 저장합니다"){
+                    override fun check(sender: CommandSender, cmd: Command, cmdStr: String): Boolean = super.check(sender, cmd, cmdStr) && sender.isOp
+                    override fun check(sender: CommandSender, cmd: Command, cmdStr: String, arg: String): Boolean = super.check(sender, cmd, cmdStr, arg) && sender.isOp
                     override fun run(sender: CommandSender, cmd: Command, cmdStr: String): Boolean {
                         try{
                             qoBSave(dataFile)
-                            sender.sendMessage("저장되었습니다")
+                            sender.sendMessage("${helpColor}저장되었습니다")
                         }catch(e: Exception){
-                            sender.sendMessage("저장에 실패했습니다")
+                            sender.sendMessage("${helpColor}저장에 실패했습니다")
                         }
 
                         return true
                     }
                 },
                 object: QoBFixedArg("불러오기", "데이터를 불러옵니다"){
+                    override fun check(sender: CommandSender, cmd: Command, cmdStr: String): Boolean = super.check(sender, cmd, cmdStr) && sender.isOp
+                    override fun check(sender: CommandSender, cmd: Command, cmdStr: String, arg: String): Boolean = super.check(sender, cmd, cmdStr, arg) && sender.isOp
                     override fun run(sender: CommandSender, cmd: Command, cmdStr: String): Boolean {
                         try{
                             qoBLoad(dataFile)
-                            sender.sendMessage("저장되었습니다")
+                            sender.sendMessage("불러왔습니다")
                         }catch(e: Exception){
-                            sender.sendMessage("저장에 실패했습니다")
+                            sender.sendMessage("불러오는데 실패했습니다")
                         }
 
                         return true
                     }
-                }
+                },
+                object: QoBFixedArg("제거", "", false){
+                    override fun check(sender: CommandSender, cmd: Command, cmdStr: String): Boolean = super.check(sender, cmd, cmdStr) && sender.isOp
+                    override fun check(sender: CommandSender, cmd: Command, cmdStr: String, arg: String): Boolean = super.check(sender, cmd, cmdStr, arg) && sender.isOp
+
+                    override fun run(sender: CommandSender, cmd: Command, cmdStr: String): Boolean = false
+                }.appendArgs(
+                    object: QoBStringArg("[데이터 키]", "데이터를 읽어와 출력합니다"){
+                        override fun check(sender: CommandSender, cmd: Command, cmdStr: String): Boolean = super.check(sender, cmd, cmdStr) && sender.isOp
+                        override fun check(sender: CommandSender, cmd: Command, cmdStr: String, arg: String): Boolean = super.check(sender, cmd, cmdStr, arg) && sender.isOp
+                        override fun run(sender: CommandSender, cmd: Command, cmdStr: String): Boolean {
+                            var willRemoved: QoBData<*>? = null
+                            for (data in datas){
+                                if(result == data.key){
+                                    willRemoved = data
+                                    break
+                                }
+                            }
+
+                            if(willRemoved != null) datas.remove(willRemoved)
+                            else return true
+
+                            return false
+                        }
+
+                        override fun tabComplete(): MutableList<String> {
+                            recommends.addAll(datas.map { it.key })
+
+                            return super.tabComplete()
+                        }
+                    }
+                )
             ),
             object: QoBFixedArg("타이머", "타이머들의 정보를 출력합니다", true){
                 override fun check(sender: CommandSender, cmd: Command, cmdStr: String): Boolean = super.check(sender, cmd, cmdStr) && sender.isOp
@@ -293,9 +378,9 @@ class McQoB: JavaPlugin() {
                         }
                     }
 
-                    override fun check(sender: CommandSender, cmd: Command, cmdStr: String, arg: String): Boolean = timers.any { it.title == arg }
+                    override fun check(sender: CommandSender, cmd: Command, cmdStr: String, arg: String): Boolean = timers.any { it.title == arg } && sender.isOp
 
-                    override fun check(sender: CommandSender, cmd: Command, cmdStr: String): Boolean = true
+                    override fun check(sender: CommandSender, cmd: Command, cmdStr: String): Boolean = sender.isOp
 
                     override fun run(sender: CommandSender, cmd: Command, cmdStr: String): Boolean {
                         if(result != null) {
@@ -317,6 +402,8 @@ class McQoB: JavaPlugin() {
 
                 }.appendArgs(
                     object: QoBFixedArg("일시정지", "타이머를 일시정지합니다", completed = true){
+                        override fun check(sender: CommandSender, cmd: Command, cmdStr: String): Boolean = super.check(sender, cmd, cmdStr) && sender.isOp
+                        override fun check(sender: CommandSender, cmd: Command, cmdStr: String, arg: String): Boolean = super.check(sender, cmd, cmdStr, arg) && sender.isOp
                         override fun run(sender: CommandSender, cmd: Command, cmdStr: String): Boolean {
                             if(beforeArgs[1] is QoBValuedArg<*> && (beforeArgs[1] as QoBValuedArg<*>).result != null && (beforeArgs[1] as QoBValuedArg<*>).result is QoBBossBarTimer){
                                 val timer = ((beforeArgs[1] as QoBValuedArg<*>).result as QoBBossBarTimer)
@@ -329,6 +416,8 @@ class McQoB: JavaPlugin() {
                         }
                     },
                     object: QoBFixedArg("계속", "일시정지한 타이머를 다시 시작합니다", completed = true){
+                        override fun check(sender: CommandSender, cmd: Command, cmdStr: String): Boolean = super.check(sender, cmd, cmdStr) && sender.isOp
+                        override fun check(sender: CommandSender, cmd: Command, cmdStr: String, arg: String): Boolean = super.check(sender, cmd, cmdStr, arg) && sender.isOp
                         override fun run(sender: CommandSender, cmd: Command, cmdStr: String): Boolean {
                             if(beforeArgs[1] is QoBValuedArg<*> && (beforeArgs[1] as QoBValuedArg<*>).result != null && (beforeArgs[1] as QoBValuedArg<*>).result is QoBBossBarTimer){
                                 val timer = ((beforeArgs[1] as QoBValuedArg<*>).result as QoBBossBarTimer)
@@ -340,7 +429,25 @@ class McQoB: JavaPlugin() {
                             return true
                         }
                     },
+                    object: QoBFixedArg("제거", "타이머를 타이머 목록에서 제거합니다", completed = true){
+                        override fun check(sender: CommandSender, cmd: Command, cmdStr: String): Boolean = super.check(sender, cmd, cmdStr) && sender.isOp
+                        override fun check(sender: CommandSender, cmd: Command, cmdStr: String, arg: String): Boolean = super.check(sender, cmd, cmdStr, arg) && sender.isOp
+                        override fun run(sender: CommandSender, cmd: Command, cmdStr: String): Boolean {
+                            if(beforeArgs[1] is QoBValuedArg<*> && (beforeArgs[1] as QoBValuedArg<*>).result != null && (beforeArgs[1] as QoBValuedArg<*>).result is QoBBossBarTimer){
+                                val timer = ((beforeArgs[1] as QoBValuedArg<*>).result as QoBBossBarTimer)
+                                timer.pause()
+                                timer.hide(*timer.bossBar.players.toTypedArray())
+                                timer.remove()
+
+                                sender.sendMessage("${helpColor}타이머가 제거되었습니다")
+                            }
+
+                            return true
+                        }
+                    },
                     object: QoBFixedArg("배속", "현재 타이머가 몇배속으로 흘러가는지 봅니다", completed = true){
+                        override fun check(sender: CommandSender, cmd: Command, cmdStr: String): Boolean = super.check(sender, cmd, cmdStr) && sender.isOp
+                        override fun check(sender: CommandSender, cmd: Command, cmdStr: String, arg: String): Boolean = super.check(sender, cmd, cmdStr, arg) && sender.isOp
                         override fun run(sender: CommandSender, cmd: Command, cmdStr: String): Boolean {
                             if(beforeArgs[1] is QoBValuedArg<*> && (beforeArgs[1] as QoBValuedArg<*>).result != null && (beforeArgs[1] as QoBValuedArg<*>).result is QoBBossBarTimer){
                                 val timer = ((beforeArgs[1] as QoBValuedArg<*>).result as QoBBossBarTimer)
@@ -351,6 +458,8 @@ class McQoB: JavaPlugin() {
                         }
                     }.appendArgs(
                         object: QoBIntArg("[배속 정수]", "타이머가 몇배속으로 흘러갈지 설정합니다(최대 40배속).", range = 1..40){
+                            override fun check(sender: CommandSender, cmd: Command, cmdStr: String): Boolean = super.check(sender, cmd, cmdStr) && sender.isOp
+                            override fun check(sender: CommandSender, cmd: Command, cmdStr: String, arg: String): Boolean = super.check(sender, cmd, cmdStr, arg) && sender.isOp
                             override var result: Int? = null
 
                             override fun run(sender: CommandSender, cmd: Command, cmdStr: String): Boolean {
