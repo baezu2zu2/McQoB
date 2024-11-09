@@ -1,21 +1,41 @@
 package com.kbazu.mcQoB
 
-import com.google.common.base.Charsets
 import java.io.File
 
 val datas = mutableListOf<QoBData<*>>()
 
 fun qoBSave(file: File){
+    qoBSave(file, *datas.toTypedArray())
+}
+
+fun qoBSave(file: File, vararg dataArray: QoBData<*>){
     if(!file.exists()) {
         file.parentFile.mkdirs()
         file.createNewFile()
     }
 
+    val reader = file.inputStream()
+    val lines = reader.readAllBytes().toString(Charsets.UTF_16BE).split("\n").map { it.replace(" ", "") }
+    val unloadeds = mutableListOf<String>()
+
+    for (line in lines) {
+        val dst = line.split(":")
+        val key = dst[0]
+
+        if(dataArray.all{ it.key != key }){
+            unloadeds.add(line)
+        }
+    }
+
     val fout = file.outputStream()
 
-    for (data in datas){
+    for (data in dataArray){
         if(data.shouldNotLoad) continue
-        fout.write("${data.key}: ${data.extractString()}\n".toByteArray(Charsets.UTF_8))
+        fout.write("${data.key}: ${data.extractString()}\n".toByteArray(Charsets.UTF_16BE))
+    }
+
+    for (unloaded in unloadeds){
+        if(unloaded.isNotEmpty()) fout.write("${unloaded}\n".toByteArray(Charsets.UTF_16BE))
     }
 
     fout.flush()
@@ -24,21 +44,19 @@ fun qoBSave(file: File){
 }
 
 fun qoBLoad(file: File){
+    qoBLoad(file, *datas.toTypedArray())
+}
+
+fun qoBLoad(file: File, vararg dataArray: QoBData<*>){
     if(!file.exists()) {
         file.parentFile.mkdirs()
         file.createNewFile()
     }
 
     val reader = file.inputStream()
+    val lines = reader.readAllBytes().toString(Charsets.UTF_16BE).split("\n").map { it.replace(" ", "") }
 
-    while(reader.available() > 0){
-        val charArray = mutableListOf<Char>()
-        do{
-            val c = reader.read().toChar()
-            if(c != ' ' && c != '\n') charArray.add(c)
-        }while(c != '\n')
-
-        val line = String(charArray.toCharArray())
+    for (line in lines){
         val dst = line.split(":")
         val key = dst[0]
         val value = dst.slice(1 until dst.size).joinToString(":")
@@ -47,6 +65,7 @@ fun qoBLoad(file: File){
             if(data.key == key){
                 if(data.shouldNotLoad) continue
                 data.load(value)
+                break
             }
         }
     }
