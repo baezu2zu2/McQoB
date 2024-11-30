@@ -88,6 +88,7 @@ class QoBItemElement(val airType: Material, val airName: String?, val data: QoBD
             isAir = true
         }else{
             this.itemStack = data.data!!
+            isAir = false
         }
     }
 

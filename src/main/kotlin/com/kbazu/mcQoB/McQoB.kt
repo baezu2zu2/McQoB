@@ -482,8 +482,8 @@ class McQoB: JavaPlugin() {
     }
 }
 
-val version: Float = 4.0f
-val state: State = State.Alpha
+val version: Float = 1.0f
+val state: State = State.Beta
 
 interface StateFunc{
     val str: String
