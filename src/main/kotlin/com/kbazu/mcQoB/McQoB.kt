@@ -204,6 +204,8 @@ class McQoB: JavaPlugin() {
                 object: QoBValuedArg<QoBPage>("[페이지 제목]", "페이지를 엽니다(플레이어만 실행 가능)"){
                     override fun check(sender: CommandSender, cmd: Command, cmdStr: String): Boolean = sender.isOp
                     override fun check(sender: CommandSender, cmd: Command, cmdStr: String, arg: String): Boolean = sender.isOp
+                    override var result: QoBPage? = null
+
                     override fun value(sender: CommandSender, cmd: Command, cmdStr: String, arg: String) {
                         for (page in pages){
                             if(arg == page.title){
@@ -263,6 +265,8 @@ class McQoB: JavaPlugin() {
                     object: QoBStringArg("[데이터 키]", "데이터를 읽어와 출력합니다"){
                         override fun check(sender: CommandSender, cmd: Command, cmdStr: String): Boolean = super.check(sender, cmd, cmdStr) && sender.isOp
                         override fun check(sender: CommandSender, cmd: Command, cmdStr: String, arg: String): Boolean = super.check(sender, cmd, cmdStr, arg) && sender.isOp
+                        override var result: String? = null
+
                         override fun run(sender: CommandSender, cmd: Command, cmdStr: String): Boolean {
                             for (data in datas){
                                 if(result == data.key){
@@ -331,6 +335,8 @@ class McQoB: JavaPlugin() {
                     object: QoBStringArg("[데이터 키]", "데이터를 읽어와 출력합니다"){
                         override fun check(sender: CommandSender, cmd: Command, cmdStr: String): Boolean = super.check(sender, cmd, cmdStr) && sender.isOp
                         override fun check(sender: CommandSender, cmd: Command, cmdStr: String, arg: String): Boolean = super.check(sender, cmd, cmdStr, arg) && sender.isOp
+                        override var result: String? = null
+
                         override fun run(sender: CommandSender, cmd: Command, cmdStr: String): Boolean {
                             var willRemoved: QoBData<*>? = null
                             for (data in datas){

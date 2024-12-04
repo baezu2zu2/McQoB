@@ -1,5 +1,10 @@
 package com.kbazu.mcQoB
 
+import org.bukkit.inventory.ItemStack
+import org.bukkit.util.io.BukkitObjectInputStream
+import org.bukkit.util.io.BukkitObjectOutputStream
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import java.io.File
 
 val datas = mutableListOf<QoBData<*>>()
@@ -154,4 +159,37 @@ class QoBPlayersData<T>{
     }
     operator fun contains(name: String): Boolean = playerDatas.count { it.name == name } > 0
     operator fun contains(data: QoBPlayerData<T>): Boolean = playerDatas.contains(data)
+}
+
+class QoBItemData(key: String, item: ItemStack?, shouldNotLoad: Boolean=false): QoBGlobalData<ItemStack?>(key, item, shouldNotLoad){
+    override fun extractString(): String{
+        if(data != null){
+            val baos = ByteArrayOutputStream()
+            val boos = BukkitObjectOutputStream(baos)
+
+            boos.writeObject(data)
+            boos.flush()
+
+            boos.close()
+
+            return baos.toByteArray().map { it.toInt().toString() }.joinToString("|")
+        }else {
+            return "null"
+        }
+    }
+
+    override fun extractData(str: String): ItemStack? {
+        if(str != "null"){
+            val inputStream = ByteArrayInputStream(str.split("|").map { it.toInt().toByte() }.toByteArray())
+            val dataInput = BukkitObjectInputStream(inputStream)
+
+            val result = dataInput.readObject()
+
+            dataInput.close()
+
+            return result as ItemStack?
+        }else {
+            return null
+        }
+    }
 }
